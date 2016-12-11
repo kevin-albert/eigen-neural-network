@@ -12,6 +12,8 @@ namespace mnist {
     void scan(const std::string &label_file, const std::string &image_file, 
               const int N, std::function<void(const byte, const byte*)> fn);
 
+    // print label + image to stdout
+    void print_image(const byte label, const byte* image);
 }
 
 #endif

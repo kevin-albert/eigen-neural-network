@@ -38,11 +38,24 @@ namespace mnist {
         for (int i = 0; i < N; ++i) {
             labels.read((char*)&label, LBL_SIZE);
             images.read((char*) image, IMG_SIZE);
+
             if (labels && images) {
                 fn(label, image);
             } else {
                 throw std::runtime_error("read failed");
             }
         }
+    }
+
+    void print_image(const byte label, const byte *image) {
+        std::cout << "label:  " << (int) label << '\n'
+                  << "image:  ";
+        for (int y = 0; y < 28; ++y) {
+            std::cout << "\n        ";
+            for (int x = 0; x < 28; ++x) {
+                std::cout << (image[y*28+x] > 200 ? '#' : ' ');
+            }
+        }
+        std::cout << '\n';
     }
 }

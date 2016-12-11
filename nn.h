@@ -66,6 +66,9 @@ namespace nn {
     template<class... C>
     void updateweights(const float eta, C&... connection);
 
+    // error amount - sum of squares
+    template<size_t N>
+    float error(const Layer<N> &output, const Eigen::MatrixXf &Y);
 
 }
 

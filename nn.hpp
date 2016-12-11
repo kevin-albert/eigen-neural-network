@@ -90,6 +90,13 @@ namespace nn {
     void updateweights(const float eta, C&... connections) {
         pass( _updateweights(eta, connections)... );
     }
+
+
+    // error amount - sum of squares
+    template<size_t N>
+    float error(const Layer<N> &output, const Eigen::MatrixXf &Y) {
+        return (Y-output.Z).squaredNorm();
+    }
 }
 
 #endif
