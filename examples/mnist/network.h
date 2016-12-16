@@ -42,22 +42,22 @@ public:
         nn::forwardstep(ho);
     }
 
-    void calc_deltas() {
-        nn::calc_output_delta(output);
-    }
-
-    void batch_reset_deltas() {
-        nn::batch_reset_output_delta(output);
-    }
-
-    void batch_add_deltas() {
-        nn::batch_add_output_delta(output);
-    }
-
     void backwardpass(const float eta, const float alpha) {
+        nn::calc_output_delta(output);
         nn::backwardstep(ho);
         nn::backwardstep(hh);
         nn::updateweights(eta, alpha, ih, hh, ho);
+    }
+
+    void batch_backwardpass() {
+        nn::calc_output_delta(output);
+        nn::batch_backwardstep(ho);
+        nn::batch_backwardstep(hh);            
+    }
+
+    void batch_update_reset(const float eta, const float alpha) {
+        nn::updateweights(eta, alpha, ih, hh, ho);
+        nn::batch_reset_gradients(hh, ho);
     }
 
 private:

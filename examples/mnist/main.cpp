@@ -90,13 +90,11 @@ int main(int argc, char **argv) {
             network.forwardpass();
 
             if (real_batch_size == 1) {
-                network.calc_deltas();
                 network.backwardpass(eta, alpha);
             } else {
-                network.batch_add_deltas();
+                network.batch_backwardpass();
                 if (++batch_idx == real_batch_size) {
-                    network.backwardpass(eta, alpha);
-                    network.batch_reset_deltas();
+                    network.batch_update_reset(eta, alpha);
                     batch_idx = 0;
                 }
             }

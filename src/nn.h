@@ -91,11 +91,15 @@ namespace nn {
         // weight momentum
         Eigen::MatrixXf M;
 
+        // HACK - buffer for temporary storage of delta calculations for batch
+        Eigen::MatrixXf _D;
+
         Connection(A &lower, B &upper): 
                 lower(lower), 
                 upper(upper), 
                 W(Eigen::MatrixXf::Random(A::size, B::size) * 0.1),
-                M(Eigen::MatrixXf::Zero(A::size, B::size)) {}
+                M(Eigen::MatrixXf::Zero(A::size, B::size)),
+                _D(Eigen::MatrixXf::Zero(A::size, 1)) {}
     };
 
     // connect two layers
@@ -124,9 +128,17 @@ namespace nn {
     template<class A, class B, class... C>
     void backwardstep(Connection<A,B> &first, C&... connections);
     
+    // for minibatch training - zero out all gradients 
+    template<class... C>
+    void batch_reset_gradients(C&... connections);
+
+      // for minibatch training - add to gradients
+    template<class A, class B, class... C>
+    void batch_backwardstep(Connection<A,B> &first, C&... connections);
+
     // update weights for connections based on gradients
     template<class... C>
-    void updateweights(const float eta, const float alpha, C&... connection);
+    void updateweights(const float eta, const float alpha, C&... connections);
 
     // error amount - sum of squares
     template<size_t N>

@@ -39,7 +39,7 @@ namespace nn {
 
     template<class A, class B, class... C>
     inline static auto _forwardstep(Connection<A,B> &connection, C&... connections) {
-        return connection.lower.Z * connection.W + _forwardstep(connections...);
+        return _forwardstep(connection) + _forwardstep(connections...);
     }
 
 
@@ -72,23 +72,49 @@ namespace nn {
     }
 
 
+
     template<class A, class B>
-    int _backwardstep(Connection<A,B> &connection) {
-        connection.lower.D = connection.W * connection.upper.D;
-        return 0;
+    inline static auto _backwardstep(Connection<A,B> &connection) {
+        return connection.W * connection.upper.D;
     }
 
-
-
+    template<class A, class B, class... C>
+    inline static auto _backwardstep(Connection<A,B> &connection, C&... connections) {
+        return _backwardstep(connection) + _backwardstep(connections...);
+    }
 
     template<class A, class B, class... C>
     void backwardstep(Connection<A,B> &first, C&... connections) {
-        _backwardstep(first);
-        pass( _backwardstep(connections)... );
+        first.lower.D = _backwardstep(first, connections...);
         for (int i = 0; i < A::size; ++i) {
             first.lower.D(i, 0) *= dsigmoid(first.lower.Z(0, i));
         }
     }
+
+
+
+    template<class A, class B>
+    int _batch_reset_gradients(Connection<A, B> &connection) {
+        connection.lower.D.setZero();
+        return 0;
+    }
+
+    template<class... C>
+    void batch_reset_gradients(C&... connections) {
+        pass( _batch_reset_gradients(connections)... );
+    }
+
+    
+
+    template<class A, class B, class... C>
+    void batch_backwardstep(Connection<A,B> &first, C&... connections) {
+        first._D = _backwardstep(first, connections...);
+        for (int i = 0; i < A::size; ++i) {
+            first.lower.D(i, 0) += first._D(i, 0) * dsigmoid(first.lower.Z(0, i));
+        }
+    }
+
+
 
 
     template<class A, class B>
@@ -109,6 +135,7 @@ namespace nn {
     void updateweights(const float eta, const float alpha, C&... connections) {
         pass( _updateweights(eta, alpha, connections)... );
     }
+
 
 
     // error amount - sum of squares
