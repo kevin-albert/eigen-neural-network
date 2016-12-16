@@ -1,0 +1,130 @@
+#include <iostream>
+#include <iomanip>
+#include <unistd.h>
+#include <cmath>
+
+#include "mnist.h"
+#include "network.h"
+#include "hack.h"
+
+const int MAX_TRAIN_SIZE = 60000;
+const int MAX_TEST_SIZE = 10000;
+
+int main(int argc, char **argv) {
+
+    // params
+    float eta = 0.1;
+    float alpha = 0;
+    int num_train = MAX_TRAIN_SIZE;
+    int num_test = MAX_TEST_SIZE;
+    int batch_size = 1;
+    int num_epochs = 1;
+    bool verbose = false;
+
+    int c;
+    while ((c = getopt(argc, argv, "e:a:t:n:b:E:vh")) != -1) {
+        switch (c) {
+            case_float_arg('e', eta, eta > 0 && eta <= 1);
+            case_float_arg('a', alpha, alpha >= 0 && alpha <= 1);
+            case_int_arg('t', num_train, num_train >= 0 && num_train <= MAX_TRAIN_SIZE);
+            case_int_arg('n', num_test, num_test >= 0 && num_test <= MAX_TEST_SIZE);
+            case_int_arg('b', batch_size, batch_size > 0);
+            case_int_arg('E', num_epochs, num_epochs > 0);
+            case 'h':
+                std::cout << "usage: " << argv[0] << " [-eatnbEvh]\n"
+                          << "    -e eta        [0.1]\n"
+                          << "    -a alpha      [0.0]\n"
+                          << "    -t num_train  [60000]\n"
+                          << "    -n num_test   [10000]\n"
+                          << "    -b batch_size [1]\n"
+                          << "    -E num_epochs [1]\n"
+                          << "    -v verbose    [false]\n"
+                          << "    -h help\n"
+                          << "\n";
+                return EXIT_SUCCESS;
+            case 'v':
+                verbose = true;
+                break;
+            case '?':
+                print_usage_exit(argv[0]);
+            default:
+                abort();
+        }
+    }
+
+    std::cout << "parameters:\n"
+              << "    eta:          " << eta << "\n"
+              << "    alpha:        " << alpha << "\n"
+              << "    num_train:    " << num_train << "\n"
+              << "    num_test:     " << num_test << "\n"
+              << "    batch_size:   " << batch_size << "\n"
+              << "    num_epochs:   " << num_epochs << "\n"
+              << "    threads:      " << Eigen::nbThreads() << "\n"
+              << "\n";
+    
+    Network network;
+    mnist::DB train_data("train-labels-idx1-ubyte", "train-images-idx3-ubyte");
+    mnist::DB test_data("t10k-labels-idx1-ubyte", "t10k-images-idx3-ubyte");
+
+    int batch_idx = 0;
+    double error_rate = 1;
+
+    for (int epoch = 0; epoch < num_epochs; ++epoch) {
+
+        int real_batch_size = std::max(
+                            1,
+                            (int) (
+                            batch_size 
+                                * (1.0 - (double) epoch / num_epochs) 
+                                * (0.5 + std::sin((double) epoch * 0.7) / 2)));
+      
+
+        std::cout << "real_batch_size:  " << real_batch_size << "\n"; 
+                  
+        //
+        // train
+        //
+        for (int i = 0; i < num_train; ++i) {
+            network.set_label(train_data.next_label());
+            network.set_image(train_data.next_image());
+            network.forwardpass();
+
+            if (real_batch_size == 1) {
+                network.calc_deltas();
+                network.backwardpass(eta, alpha);
+            } else {
+                network.batch_add_deltas();
+                if (++batch_idx == real_batch_size) {
+                    network.backwardpass(eta, alpha);
+                    network.batch_reset_deltas();
+                    batch_idx = 0;
+                }
+            }
+        }
+
+        //
+        // test
+        // 
+        int error_count = 0;
+        
+        for (int i = 0; i < num_test; ++i) {
+            auto label = test_data.next_label();
+            network.set_label(label);
+            network.set_image(test_data.next_image());
+            network.forwardpass();
+            if (label != network.get_output()) {
+                ++error_count;
+            }
+        }
+
+        error_rate = (double) error_count / num_test;
+
+        std::cout << "epoch: " << std::setw(8) << (epoch+1) << ", "
+                  << "error rate: " << error_rate
+                  << "\n";
+
+        train_data.reset();
+        test_data.reset();
+    }
+
+}
