@@ -22,6 +22,20 @@
 #define case_int_arg(flag, var, test) gen_case_arg(flag, var, test, parse_int)
 #define case_float_arg(flag, var, test) gen_case_arg(flag, var, test, parse_float)
 
+#define case_input_value(flag, var, test) case flag: {\
+    std::cout << #var << ": ";\
+    decltype(var) tmp;\
+    tmp = var;\
+    std::cin >> var;\
+    if (!(test)) {\
+        std::cerr << "invalid value for " << #var \
+                  << ", failed check: " #test;\
+        var = tmp;\
+        goto menu_select;\
+    }\
+    break;\
+}
+
 void print_usage_exit(char *execname) {
     std::cerr << "usage: " << execname << " [-easinNbEv]\n";
     exit(EXIT_FAILURE);
