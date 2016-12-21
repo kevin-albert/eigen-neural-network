@@ -20,7 +20,7 @@
     }\
     break
 #define case_int_arg(flag, var, test) gen_case_arg(flag, var, test, parse_int)
-#define case_float_arg(flag, var, test) gen_case_arg(flag, var, test, parse_float)
+#define case_double_arg(flag, var, test) gen_case_arg(flag, var, test, parse_double)
 
 #define case_input_value(flag, var, test) case flag: {\
     std::cout << #var << ": ";\
@@ -60,7 +60,7 @@ fail:
     return 0;
 }
 
-float parse_float(char *execname, const std::string &name) {
+double parse_double(char *execname, const std::string &name) {
     const char *p = ::optarg;
     if (!p) goto fail;
     if (*p == '-') ++p;

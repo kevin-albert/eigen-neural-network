@@ -20,9 +20,9 @@ namespace nn {
     struct LayerBase {
 
         // activations
-        Eigen::MatrixXf Z;
+        Eigen::MatrixXd Z;
 
-        LayerBase(Eigen::MatrixXf Z): Z(Z) {}
+        LayerBase(Eigen::MatrixXd Z): Z(Z) {}
 
         static constexpr size_t size = N;
     };
@@ -30,7 +30,7 @@ namespace nn {
 
     template<size_t N>
     struct InputLayer: LayerBase<N> {
-        InputLayer(): LayerBase<N>(Eigen::MatrixXf::Zero(1,N)) {}
+        InputLayer(): LayerBase<N>(Eigen::MatrixXd::Zero(1,N)) {}
     };
 
 
@@ -38,21 +38,21 @@ namespace nn {
     struct Layer: public LayerBase<N> {
 
         // biases
-        Eigen::MatrixXf B;
+        Eigen::MatrixXd B;
 
         // gradients
-        Eigen::MatrixXf D;
+        Eigen::MatrixXd D;
 
         // bias momentum
-        Eigen::MatrixXf M;
+        Eigen::MatrixXd M;
 
         // previous bias deltas
-        // Eigen::MatrixXf M;
+        // Eigen::MatrixXd M;
 
-        Layer(): LayerBase<N>(Eigen::MatrixXf::Random(1,N) * 0.1),
-                B(Eigen::MatrixXf::Random(1,N) * 0.1),
-                D(Eigen::MatrixXf(N,1)),
-                M(Eigen::MatrixXf::Zero(1,N)) {
+        Layer(): LayerBase<N>(Eigen::MatrixXd::Random(1,N) * 0.1),
+                B(Eigen::MatrixXd::Random(1,N) * 0.1),
+                D(Eigen::MatrixXd(N,1)),
+                M(Eigen::MatrixXd::Zero(1,N)) {
 
             for (int i = 0; i < N; ++i) {
                 LayerBase<N>::Z(0,i) += 0.5;
@@ -71,11 +71,11 @@ namespace nn {
     struct OutputLayer: public Layer<N> {
 
         // expected values
-        Eigen::MatrixXf Y;
+        Eigen::MatrixXd Y;
 
         OutputLayer(): 
                 Layer<N>(),
-                Y(Eigen::MatrixXf::Zero(1,N)) {}
+                Y(Eigen::MatrixXd::Zero(1,N)) {}
 
     };
 
@@ -90,20 +90,20 @@ namespace nn {
         B &upper;
 
         // weight matrix
-        Eigen::MatrixXf W;
+        Eigen::MatrixXd W;
         
         // weight momentum
-        Eigen::MatrixXf M;
+        Eigen::MatrixXd M;
 
         // HACK - buffer for temporary storage of delta calculations for batch
-        Eigen::MatrixXf _D;
+        Eigen::MatrixXd tmp;
 
         Connection(A &lower, B &upper): 
                 lower(lower), 
                 upper(upper), 
-                W(Eigen::MatrixXf(A::size, B::size) * 0.1),
-                M(Eigen::MatrixXf::Zero(A::size, B::size)),
-                _D(Eigen::MatrixXf::Zero(A::size, 1)) {
+                W(Eigen::MatrixXd(A::size, B::size) * 0.1),
+                M(Eigen::MatrixXd::Zero(A::size, B::size)),
+                tmp(Eigen::MatrixXd::Zero(A::size, 1)) {
 
             // initialize weights with mean 0 and standard deviation 1/sqrt(|A|)
             std::default_random_engine rng;
@@ -152,12 +152,12 @@ namespace nn {
 
     // update weights for connections based on gradients
     template<class... C>
-    void updateweights(const float eta, const float alpha, 
-                       const float weight_factor,  C&... connections);
+    void updateweights(const double eta, const double alpha, 
+                       const double weight_factor,  C&... connections);
 
     // error amount - sum of squares
     template<size_t N>
-    float error(const Layer<N> &out);
+    double error(const Layer<N> &out);
 
 }
 

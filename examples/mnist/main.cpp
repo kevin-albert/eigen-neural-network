@@ -10,19 +10,19 @@
 
 const int MAX_TRAIN_SIZE = 60000;
 const int MAX_TEST_SIZE = 10000;
-const double pi = 3.1415926535897;
+const double PI = 3.1415926535897;
 
 
 // params
-float eta = 0.1;
-float alpha = 0;
+double eta = 0.1;
+double alpha = 0;
 int num_train = MAX_TRAIN_SIZE;
 int num_test = MAX_TEST_SIZE;
 int batch_size = 1;
-float batch_flux_rate = 0.2;
-float batch_flux_amount = 0;
-float batch_size_decay = 1;
-float weight_decay = 0;
+double batch_flux_rate = 0.2;
+double batch_flux_amount = 0;
+double batch_size_decay = 1;
+double weight_decay = 0;
 int num_epochs = 1;
 bool verbose = false;
 
@@ -39,15 +39,15 @@ int main(int argc, char **argv) {
     int c;
     while ((c = getopt(argc, argv, "e:a:w:t:n:b:f:F:d:E:vh")) != -1) {
         switch (c) {
-            case_float_arg('e', eta, eta > 0 && eta <= 1);
-            case_float_arg('a', alpha, alpha >= 0 && alpha <= 1);
-            case_float_arg('w', weight_decay, weight_decay >= 0);
+            case_double_arg('e', eta, eta > 0 && eta <= 1);
+            case_double_arg('a', alpha, alpha >= 0 && alpha <= 1);
+            case_double_arg('w', weight_decay, weight_decay >= 0);
             case_int_arg('t', num_train, num_train >= 0 && num_train <= MAX_TRAIN_SIZE);
             case_int_arg('n', num_test, num_test >= 0 && num_test <= MAX_TEST_SIZE);
             case_int_arg('b', batch_size, batch_size > 0);
-            case_float_arg('f', batch_flux_rate, batch_flux_rate > 0 && batch_flux_rate < 1);
-            case_float_arg('F', batch_flux_amount, true);
-            case_float_arg('d', batch_size_decay, batch_size_decay >= 0);
+            case_double_arg('f', batch_flux_rate, batch_flux_rate > 0 && batch_flux_rate < 1);
+            case_double_arg('F', batch_flux_amount, true);
+            case_double_arg('d', batch_size_decay, batch_size_decay >= 0);
             case_int_arg('E', num_epochs, num_epochs > 0);
             case 'h':
                 std::cout << "usage: " << argv[0] << " [-eawtnbfFdEvh]\n"
@@ -94,7 +94,7 @@ int main(int argc, char **argv) {
     mnist::DB test_data("t10k-labels-idx1-ubyte", "t10k-images-idx3-ubyte");
 
     int batch_idx = 0;
-    double error_rate = 1;
+    double error_rate;
 
     for (int epoch = 0; epoch < num_epochs; ++epoch) {
 
@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
                             (int) (
                             batch_size 
                                 * multiplier 
-                                * (1.0 + batch_flux_amount * std::sin(2.0 * pi * epoch * batch_flux_rate)) / 2));
+                                * (1.0 + batch_flux_amount * std::sin(2.0 * PI * epoch * batch_flux_rate)) / 2));
                   
         //
         // train

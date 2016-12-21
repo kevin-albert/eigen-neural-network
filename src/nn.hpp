@@ -17,14 +17,14 @@ namespace nn {
     inline void pass(_&&...) {}
 
 
-    inline float sigmoid(float x) {
+    inline double sigmoid(double x) {
         return x < -45 ? 0 :
                x >  45 ? 1 :
                1.0 / (1.0 + std::exp(-x));
     }
 
 
-    inline float dsigmoid(float x) {
+    inline double dsigmoid(double x) {
         return (1.0 - x) * x;
     }
 
@@ -108,9 +108,9 @@ namespace nn {
 
     template<class A, class B, class... C>
     void batch_backwardstep(Connection<A,B> &first, C&... connections) {
-        first._D = _backwardstep(first, connections...);
+        first.tmp = _backwardstep(first, connections...);
         for (int i = 0; i < A::size; ++i) {
-            first.lower.D(i, 0) += first._D(i, 0) * dsigmoid(first.lower.Z(0, i));
+            first.lower.D(i, 0) += first.tmp(i, 0) * dsigmoid(first.lower.Z(0, i));
         }
     }
 
@@ -118,8 +118,8 @@ namespace nn {
 
 
     template<class A, class B>
-    static inline int _updateweights(const float eta, const float alpha, 
-                                     const float weight_factor, 
+    static inline int _updateweights(const double eta, const double alpha, 
+                                     const double weight_factor, 
                                      Connection<A,B> &connection) {
 
         connection.W += alpha * connection.M;
@@ -134,8 +134,8 @@ namespace nn {
     
 
     template<class... C>
-    void updateweights(const float eta, const float alpha, 
-                       const float weight_factor, C&... connections) {
+    void updateweights(const double eta, const double alpha, 
+                       const double weight_factor, C&... connections) {
         pass( _updateweights(eta, alpha, weight_factor, connections)... );
     }
 
@@ -143,7 +143,7 @@ namespace nn {
 
     // error amount - sum of squares
     template<size_t N>
-    float error(const Layer<N> &out) {
+    double error(const Layer<N> &out) {
         return (out.Y-out.Z).squaredNorm();
     }
 }

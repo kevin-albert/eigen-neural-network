@@ -15,7 +15,7 @@ public:
 
     void set_image(const mnist::byte *image) {
         for (int i = 0; i < 784; ++i) {
-            input.Z(0,i) = ::pow((float)image[i] / 0xff, 3);
+            input.Z(0,i) = ::pow((double)image[i] / 0xff, 3);
         }
     }
 
@@ -25,7 +25,7 @@ public:
     }
 
     mnist::byte get_output() {
-        float max = 0;
+        double max = 0;
         mnist::byte result;
         for (int i = 0; i < 10; ++i) {
             if (output.Z(0,i) > max) {
@@ -42,12 +42,12 @@ public:
         nn::forwardstep(ho);
     }
 
-    void backwardpass(const float eta, const float alpha, 
-                      const float weight_decay) {
+    void backwardpass(const double eta, const double alpha, 
+                      const double weight_decay) {
         nn::calc_output_delta(output);
         nn::backwardstep(ho);
         nn::backwardstep(hh);
-        float weight_factor = 1.0 - eta * weight_decay;
+        double weight_factor = 1.0 - eta * weight_decay;
         nn::updateweights(eta, alpha, weight_factor, ih, hh, ho);
     }
 
@@ -57,9 +57,9 @@ public:
         nn::batch_backwardstep(hh);            
     }
 
-    void batch_update_reset(const float eta, const float alpha, 
-                            const float weight_decay) {
-        float weight_factor = 1.0 - eta * weight_decay;
+    void batch_update_reset(const double eta, const double alpha, 
+                            const double weight_decay) {
+        double weight_factor = 1.0 - eta * weight_decay;
         nn::updateweights(eta, alpha, weight_factor, ih, hh, ho);
         nn::batch_reset_gradients(hh, ho);
     }
