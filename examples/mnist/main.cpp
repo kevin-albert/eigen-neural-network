@@ -22,6 +22,7 @@ int batch_size = 1;
 float batch_flux_rate = 0.2;
 float batch_flux_amount = 0;
 float batch_size_decay = 1;
+float weight_decay = 0;
 int num_epochs = 1;
 bool verbose = false;
 
@@ -36,10 +37,11 @@ int main(int argc, char **argv) {
     signal(SIGINT, onsignal);
 
     int c;
-    while ((c = getopt(argc, argv, "e:a:t:n:b:f:F:d:E:vh")) != -1) {
+    while ((c = getopt(argc, argv, "e:a:w:t:n:b:f:F:d:E:vh")) != -1) {
         switch (c) {
             case_float_arg('e', eta, eta > 0 && eta <= 1);
             case_float_arg('a', alpha, alpha >= 0 && alpha <= 1);
+            case_float_arg('w', weight_decay, weight_decay >= 0);
             case_int_arg('t', num_train, num_train >= 0 && num_train <= MAX_TRAIN_SIZE);
             case_int_arg('n', num_test, num_test >= 0 && num_test <= MAX_TEST_SIZE);
             case_int_arg('b', batch_size, batch_size > 0);
@@ -48,9 +50,10 @@ int main(int argc, char **argv) {
             case_float_arg('d', batch_size_decay, batch_size_decay >= 0);
             case_int_arg('E', num_epochs, num_epochs > 0);
             case 'h':
-                std::cout << "usage: " << argv[0] << " [-eatnbEvh]\n"
+                std::cout << "usage: " << argv[0] << " [-eawtnbfFdEvh]\n"
                           << "    -e eta                [0.1]\n"
                           << "    -a alpha              [0.0]\n"
+                          << "    -w weight_decay       [0.0]\n"
                           << "    -t num_train          [60000]\n"
                           << "    -n num_test           [10000]\n"
                           << "    -b batch_size         [1]\n"
@@ -75,6 +78,7 @@ int main(int argc, char **argv) {
     std::cout << "parameters:\n"
               << "    eta: (-e)                 " << eta << "\n"
               << "    alpha: (-a)               " << alpha << "\n"
+              << "    weight_decay: (-w)        " << weight_decay << "\n"
               << "    num_train: (-t)           " << num_train << "\n"
               << "    num_test: (-n)            " << num_test << "\n"
               << "    batch_size: (-b)          " << batch_size << "\n"
@@ -116,11 +120,11 @@ int main(int argc, char **argv) {
             network.forwardpass();
 
             if (real_batch_size == 1) {
-                network.backwardpass(eta, alpha);
+                network.backwardpass(eta, alpha, weight_decay);
             } else {
                 network.batch_backwardpass();
                 if (++batch_idx == real_batch_size) {
-                    network.batch_update_reset(eta, alpha);
+                    network.batch_update_reset(eta, alpha, weight_decay);
                     batch_idx = 0;
                 }
             }
@@ -172,6 +176,7 @@ void menu() {
               << "parameters:\n"
               << "    eta: (-e)                 " << eta << "\n"
               << "    alpha: (-a)               " << alpha << "\n"
+              << "    weight_decay: (-w)        " << weight_decay << "\n"
               << "    num_train: (-t)           " << num_train << "\n"
               << "    num_test: (-n)            " << num_test << "\n"
               << "    batch_size: (-b)          " << batch_size << "\n"
@@ -193,6 +198,7 @@ menu_select:
             switch (option) {
                     case_input_value('e', eta, eta > 0 && eta <= 1);
                     case_input_value('a', alpha, alpha >= 0 && alpha <= 1);
+                    case_input_value('w', weight_decay, weight_decay >= 0);
                     case_input_value('t', num_train, num_train >= 0 && num_train <= MAX_TRAIN_SIZE);
                     case_input_value('n', num_test, num_test >= 0 && num_test <= MAX_TEST_SIZE);
                     case_input_value('b', batch_size, batch_size > 0);

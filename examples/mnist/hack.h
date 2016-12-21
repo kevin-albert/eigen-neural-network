@@ -32,6 +32,8 @@
                   << ", failed check: " #test;\
         var = tmp;\
         goto menu_select;\
+    } else {\
+        std::cout << #var " set to " << var << "\n";\
     }\
     break;\
 }

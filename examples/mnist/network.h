@@ -42,11 +42,13 @@ public:
         nn::forwardstep(ho);
     }
 
-    void backwardpass(const float eta, const float alpha) {
+    void backwardpass(const float eta, const float alpha, 
+                      const float weight_decay) {
         nn::calc_output_delta(output);
         nn::backwardstep(ho);
         nn::backwardstep(hh);
-        nn::updateweights(eta, alpha, ih, hh, ho);
+        float weight_factor = 1.0 - eta * weight_decay;
+        nn::updateweights(eta, alpha, weight_factor, ih, hh, ho);
     }
 
     void batch_backwardpass() {
@@ -55,8 +57,10 @@ public:
         nn::batch_backwardstep(hh);            
     }
 
-    void batch_update_reset(const float eta, const float alpha) {
-        nn::updateweights(eta, alpha, ih, hh, ho);
+    void batch_update_reset(const float eta, const float alpha, 
+                            const float weight_decay) {
+        float weight_factor = 1.0 - eta * weight_decay;
+        nn::updateweights(eta, alpha, weight_factor, ih, hh, ho);
         nn::batch_reset_gradients(hh, ho);
     }
 

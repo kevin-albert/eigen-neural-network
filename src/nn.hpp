@@ -119,11 +119,13 @@ namespace nn {
 
     template<class A, class B>
     static inline int _updateweights(const float eta, const float alpha, 
+                                     const float weight_factor, 
                                      Connection<A,B> &connection) {
 
         connection.W += alpha * connection.M;
         connection.M = -eta * (connection.upper.D * connection.lower.Z).transpose();
         connection.W += connection.M;
+        if (weight_factor < 1) connection.W *= weight_factor;
         connection.upper.B += alpha * connection.upper.M;
         connection.upper.M = -eta * connection.upper.D.transpose();
         connection.upper.B += connection.upper.M;
@@ -132,8 +134,9 @@ namespace nn {
     
 
     template<class... C>
-    void updateweights(const float eta, const float alpha, C&... connections) {
-        pass( _updateweights(eta, alpha, connections)... );
+    void updateweights(const float eta, const float alpha, 
+                       const float weight_factor, C&... connections) {
+        pass( _updateweights(eta, alpha, weight_factor, connections)... );
     }
 
 

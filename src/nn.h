@@ -1,9 +1,13 @@
 #ifndef nn_h
 #define nn_h
 
+#include <random>
+#include <cmath>
+
 #include "Eigen/Dense"
 
 namespace nn {
+
 
     //
     // 3 layer types:
@@ -97,9 +101,19 @@ namespace nn {
         Connection(A &lower, B &upper): 
                 lower(lower), 
                 upper(upper), 
-                W(Eigen::MatrixXf::Random(A::size, B::size) * 0.1),
+                W(Eigen::MatrixXf(A::size, B::size) * 0.1),
                 M(Eigen::MatrixXf::Zero(A::size, B::size)),
-                _D(Eigen::MatrixXf::Zero(A::size, 1)) {}
+                _D(Eigen::MatrixXf::Zero(A::size, 1)) {
+
+            // initialize weights with mean 0 and standard deviation 1/sqrt(|A|)
+            std::default_random_engine rng;
+            std::normal_distribution<double> dist(0, 1.0 / std::sqrt(A::size));      
+            for (int i = 0; i < A::size; ++i) {
+                for (int j = 0; j < B::size; ++j) {
+                    W(i,j) = dist(rng);
+                }
+            }     
+        }
     };
 
     // connect two layers
@@ -138,7 +152,8 @@ namespace nn {
 
     // update weights for connections based on gradients
     template<class... C>
-    void updateweights(const float eta, const float alpha, C&... connections);
+    void updateweights(const float eta, const float alpha, 
+                       const float weight_factor,  C&... connections);
 
     // error amount - sum of squares
     template<size_t N>
