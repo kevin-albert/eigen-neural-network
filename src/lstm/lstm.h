@@ -8,10 +8,20 @@
 #include <algorithm>
 
 #include "../../lib/Eigen/Dense"
-#include "math_fns.h"
+#include "util.h"
 
 using Vec = Eigen::VectorXf;
 using Mat = Eigen::MatrixXf;
+
+template<class V>
+void dbg(std::string lbl, V v) {
+    std::cout << lbl << ": ";
+    for (int i = 0; i < v.size(); ++i) {
+        if (i) std::cout << ", ";
+        std::cout << v[i];
+    }
+    std::cout << '\n';
+}
 
 //http://arunmallya.github.io/writeups/nn/lstm/index.html
 
@@ -20,6 +30,7 @@ struct State {
     // everything goes in one vector.
     // easy :)
     Vec data {Vec::Zero(8*N)};
+    State() { x() = Vec::Constant(N,-1); }
 
     auto z() -> decltype(data.segment(   0, 4*N)) { return data.segment(   0, 4*N); }
 
@@ -91,6 +102,10 @@ struct Gradients {
     Vec d_I{Vec::Zero(2*N)};
     auto  d_x() -> decltype(d_I.segment(0, N)) { return d_I.segment(0, N); }
     auto d_hp() -> decltype(d_I.segment(N, N)) { return d_I.segment(N, N); }
+
+    void before(Gradients<N> &next) {
+        d_h += next.d_hp();
+    }
 };
 
 
@@ -186,7 +201,7 @@ public:
         // calculate δi
         //  c = i ⊙ a + f ⊙ c^{t-1}
         // δi = δc ⊙ a 
-        grads.d_i =grads.d_c.cwiseProduct(a);
+        grads.d_i = grads.d_c.cwiseProduct(a);
 
         // calculate δf
         //  c = i ⊙ a + f ⊙ c^{t-1}
@@ -230,17 +245,15 @@ public:
 
         // apply gradients from each timestep
         for (int i = 0; i < n_steps; ++i) {
-            W   += gradients[i].d_W * lr;
-            c_b += gradients[i].d_c * lr;
-            i_b += gradients[i].d_i * lr;
-            f_b += gradients[i].d_f * lr;
-            o_b += gradients[i].d_o * lr;
+            W   -= lr * gradients[i].d_W;
+            c_b -= lr * gradients[i].d_c;
+            i_b -= lr * gradients[i].d_i;
+            f_b -= lr * gradients[i].d_f;
+            o_b -= lr * gradients[i].d_o;
         }
     }
 
 private:
-
-
     // weights
     Mat W{Mat(4*N, 2*N)};
 
@@ -252,17 +265,6 @@ private:
 
     // used in intermediate calculations
     Vec tmp{N};
-
-    // print out a vector on one line. nice for debugging
-    void print(const std::string &name, Vec &v) {
-        std::cout << name << ": ";
-        for (int i = 0; i < v.size(); ++i) {
-            if (i > 0) std::cout << ", ";
-            std::cout << v[i];
-        }
-        std::cout << "\n";
-    }
-    
 };
 
 #endif
