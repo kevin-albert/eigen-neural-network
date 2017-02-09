@@ -3,40 +3,56 @@
 
 #include "lstm.h"
 
+#define D 50
+
 int main(void) {
 
-    LSTM<1> lstm;
+    Mat X = Mat::Constant(4,3,-1);
+    X(1,0) = 1;
+    X(2,1) = 1;
+    X(3,2) = 1;
 
-    for (int e = 0; e < 10; ++e) {
+    LSTM<3,D> lstm;
+    int epochs = 10000;
 
-        std::cout << "EPOCH: " << e << "\n";
-        State<1> state[2];
-        Gradients<1> grads[2];
+    for (int e = 0; e < epochs; ++e)
+    {
 
-        // sequence of length 2        
-        state[0].x()[0] = 1;
-        state[1].x()[0] = -1;
+        // std::cout << "EPOCH: " << e << "\n";
+        State<3,D> state[4];
+        Gradients<3,D> grads[4];
 
-        for (int i = 0; i < 2; ++i) {
-            if (i > 0) state[i].after(state[i-1]);
-            lstm.forward_pass(state[i]);
-            int j = 1-i;
-            
-            grads[i].d_h = state[i].h()-state[j].x();
-            float err = std::abs(grads[i].d_h[0]);
+        // sequence of length 4
+        // 1 2 1 3
+        Mat y = Mat::Constant(4, D, -1);
+        y(0, 0) = 1;
+        y(1, 1) = 1;
+        y(2, 2) = 1;
+        y(3, 3) = 1;
 
-            std::cout << "[" << i << "] expected:   " << state[j].x() << "\n";
-            std::cout << "[" << i << "] out:        " << state[i].h() << "\n";
-            std::cout << "[" << i << "] error:      " << err << "\n";
+        float err = 0;
+        for (int i = 0; i < 4; ++i)
+        {
+            if (i > 0) state[i].after(state[i - 1]);
+            Vec x = X.row(i).transpose();
+            lstm.forward_pass(x, state[i]);
+            err += (state[i].h() - y.row(i).transpose()).squaredNorm();
+            grads[i].d_h = Vec::Constant(D, 0.5).cwiseProduct((state[i].h() - y.row(i).transpose()));
         }
+        if (e % 100 == 99) std::cout << "[" << e << "] error:      " << err << "\n";
 
-        lstm.backward_pass(state[1], grads[1]);
-        grads[0].before(grads[1]);
-        lstm.backward_pass(state[0], grads[0]);
-        lstm.update(0.5, 2, grads);
-        std::cout << "\n\n";
+        for (int i = 3; i >= 0; --i)
+        {
+            if (i < 3) grads[i].before(grads[i + 1]);
+            Vec x = X.row(i).transpose();
+            lstm.backward_pass(x, state[i], grads[i]);
+        }
+        lstm.update(0.1, 4, grads);
+        // std::cout << "\n\n";
     }
 }
+
+
 
 /*
 int main(void) {

@@ -25,12 +25,12 @@ void dbg(std::string lbl, V v) {
 
 //http://arunmallya.github.io/writeups/nn/lstm/index.html
 
-template <int N>
+template <int X, int N>
 struct State {
     // everything goes in one vector.
     // easy :)
-    Vec data {Vec::Zero(8*N)};
-    State() { x() = Vec::Constant(N,-1); }
+    Vec data {Vec::Zero(6*N)};
+    Vec I{Vec::Zero(N+X)};
 
     auto z() -> decltype(data.segment(   0, 4*N)) { return data.segment(   0, 4*N); }
 
@@ -51,18 +51,16 @@ struct State {
     auto c() -> decltype(data.segment( 5*N,   N)) { return data.segment( 5*N,   N); }
 
     // I
-    auto I() -> decltype(data.segment( 6*N, 2*N)) { return data.segment( 6*N, 2*N); }
-    auto x() -> decltype(data.segment( 6*N,   N)) { return data.segment( 6*N,   N); }
-    auto h() -> decltype(data.segment( 7*N,   N)) { return data.segment( 7*N,   N); }
+    auto h() -> decltype(I.segment(X, N)) { return I.segment(X, N); }
 
-    void after(State<N> &last) {
+    void after(State<X,N> &last) {
         h() = last.h();
         cp() = last.c();
     }
 };
 
 
-template <int N>
+template <int X, int N>
 struct Gradients {
     //
     // partial derivatives
@@ -99,23 +97,23 @@ struct Gradients {
     Mat d_W{Mat::Zero(4*N,2*N)};
 
     // δx, δh{t-1}
-    Vec d_I{Vec::Zero(2*N)};
-    auto  d_x() -> decltype(d_I.segment(0, N)) { return d_I.segment(0, N); }
-    auto d_hp() -> decltype(d_I.segment(N, N)) { return d_I.segment(N, N); }
+    Vec d_I{Vec::Zero(X+N)};
+    auto  d_x() -> decltype(d_I.segment(0, X)) { return d_I.segment(0, X); }
+    auto d_hp() -> decltype(d_I.segment(X, N)) { return d_I.segment(X, N); }
 
-    void before(Gradients<N> &next) {
+    void before(Gradients<X,N> &next) {
         d_h += next.d_hp();
     }
 };
 
 
-template<int N> class LSTM {
+template<int X, int N> class LSTM {
 public:
 
     LSTM() {
         // initialize weights     
         std::default_random_engine rng;
-        std::normal_distribution<float> dist(0,1.0/sqrt(N));
+        std::normal_distribution<float> dist(0,1.0/sqrt(X));
         for (int i = 0; i < 4*N * 2*N; ++i) {
             W.data()[i] = dist(rng);
         }
@@ -123,21 +121,20 @@ public:
 
 
     // forward pass
-    void forward_pass(State<N> &state) {
+    void forward_pass(Vec x, State<X,N> &state) {
 
         // get weight matrices                    // // another possible approach:
-        auto Wxc = W.block( 0*N,   0,   N,   N);  // // | a^ |   | Wxc Whc |
-        auto Whc = W.block( 0*N,   N,   N,   N);  // // | i^ |   | Wxi Whi |   | x       |
-        auto Wxi = W.block( 1*N,   0,   N,   N);  // // | f^ | = | Wxf Whf | X | h^{t-1} |
-        auto Whi = W.block( 1*N,   N,   N,   N);  // // | o^ |   | Wxo Who |
-        auto Wxf = W.block( 2*N,   0,   N,   N);  // state.z() = W * state.I(); 
-        auto Whf = W.block( 2*N,   N,   N,   N);  // state.i() = g(state.i() + i_b);
-        auto Wxo = W.block( 3*N,   0,   N,   N);  // state.f() = ...
-        auto Who = W.block( 3*N,   N,   N,   N);  // state.o() = ...
+        auto Wxc = W.block( 0*N,   0,   N,   X);  // // | a^ |   | Wxc Whc |
+        auto Whc = W.block( 0*N,   X,   N,   N);  // // | i^ |   | Wxi Whi |   | x       |
+        auto Wxi = W.block( 1*N,   0,   N,   X);  // // | f^ | = | Wxf Whf | X | h^{t-1} |
+        auto Whi = W.block( 1*N,   X,   N,   N);  // // | o^ |   | Wxo Who |
+        auto Wxf = W.block( 2*N,   0,   N,   X);  // state.z() = W * state.I(); 
+        auto Whf = W.block( 2*N,   X,   N,   N);  // state.i() = g(state.i() + i_b);
+        auto Wxo = W.block( 3*N,   0,   N,   X);  // state.f() = ...
+        auto Who = W.block( 3*N,   X,   N,   N);  // state.o() = ...
                                                   // // maybe we'll try it and see if things improve...
 
         // calculate new cell input & gates
-        auto x = state.x();
         auto h = state.h();
         
         // a = tanh(Wxc * x + Whc * h + c_b)
@@ -164,15 +161,15 @@ public:
 
 
     // backward pass
-    void backward_pass(State<N> &state, Gradients<N> &grads) {
+    void backward_pass(Vec x, State<X,N> &state, Gradients<X,N> &grads) {
 
-        auto a = state.a(); // cell input
-        auto i = state.i(); // input gate
-        auto f = state.f(); // forget gate
-        auto o = state.o(); // output gate
-        auto c = state.c(); // cell state
-        auto cp = state.cp(); // last cell state
-        auto h = state.h(); // cell output
+        auto a = state.a();     // cell input
+        auto i = state.i();     // input gate
+        auto f = state.f();     // forget gate
+        auto o = state.o();     // output gate
+        auto c = state.c();     // cell state
+        auto cp = state.cp();   // last cell state
+        auto h = state.h();     // cell output
 
         ///////////////////////////////////////////////////////////////////////
         // chain rule time                                                   //
@@ -184,16 +181,15 @@ public:
         //    = δh ⊙ (1-h^2)
         
         // set tmp to 1-h^2 
-        tmp = h; mod_inplace<N>(tmp, dtanhfi); 
+        tmp = c; mod_inplace<N>(tmp, std::tanhf); 
         // NOTE - we reuse tmp in grads.d_c down below
         grads.d_o = grads.d_h.cwiseProduct(tmp);
-        grads.d_o = h; mod_inplace<N>(grads.d_o, dtanhfi);
-        grads.d_o = grads.d_h.cwiseProduct(grads.d_o);
 
         // calculate δc
         //  h = o ⊙ tanh(c)
         // δc = δc{t+1} + δh ⊙ o ⊙ tanh'(c)
         //    = δc{t+1} + δh ⊙ o ⊙ (1-h^2)
+        mod_inplace<N>(tmp, dtanhfi);
         grads.d_c = grads.d_cp + grads.d_h.cwiseProduct(o).cwiseProduct(tmp);
         // and propagate to t-1
         grads.d_cp = grads.d_c.cwiseProduct(f);
@@ -206,12 +202,12 @@ public:
         // calculate δf
         //  c = i ⊙ a + f ⊙ c^{t-1}
         // δf = δc ⊙ c^{t-1}
-        // remember b = c^{t-1}
+        // remember cp = c^{t-1}
         grads.d_f = grads.d_c.cwiseProduct(cp);
 
         // calculate δa
         //  c = i ⊙ a + f ⊙ c^{t-1}
-        // δa = δa ⊙ i
+        // δa = δc ⊙ i
         grads.d_a = grads.d_c.cwiseProduct(i);
 
         // the linear component of the forward pass looks like:
@@ -234,14 +230,15 @@ public:
 
         // z  = W x I
         // δW = δz X I^T
-        grads.d_W = grads.d_z * state.I().transpose();
+        state.I.segment(0,X) = x;
+        grads.d_W = grads.d_z * state.I.transpose();
         
         // δI = [δx, δh^{t-1}] = δW^T X δz
         grads.d_I = grads.d_W.transpose() * grads.d_z;
     }
 
 
-    void update(float lr, int n_steps, Gradients<N> *gradients) {
+    void update(float lr, int n_steps, Gradients<X,N> *gradients) {
 
         // apply gradients from each timestep
         for (int i = 0; i < n_steps; ++i) {
@@ -255,7 +252,7 @@ public:
 
 private:
     // weights
-    Mat W{Mat(4*N, 2*N)};
+    Mat W{Mat(4*N, X+N)};
 
     // biases
     Vec c_b{Vec::Random(N)}; 
